@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models
 
-SECRET_KEY = "your-secret-key-change-this-in-production"
+SECRET_KEY = "a3b16c26de4fa7907c8cba9cb3f3f704542bb261ad7fdb345313ffb2ae77349f"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 day
 
