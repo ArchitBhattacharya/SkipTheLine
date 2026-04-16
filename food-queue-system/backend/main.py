@@ -1,37 +1,28 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from database import Base, engine
+import models
+from routers import auth, menu, orders, queue
 
-app = FastAPI()
+# Create all DB tables
+Base.metadata.create_all(bind=engine)
 
-# ✅ IMPORTANT (Frontend won't work without this)
+app = FastAPI(title="Canteen Queue API")
+
+# ⚠️ CORS — allows your React frontend to talk to this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],  # your Vite dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-orders = []
+app.include_router(auth.router)
+app.include_router(menu.router)
+app.include_router(orders.router)
+app.include_router(queue.router)
 
 @app.get("/")
-def home():
-    return {"message": "Backend running"}
-
-@app.post("/order")
-def create_order(item: str):
-    order = {
-        "id": len(orders) + 1,
-        "item": item,
-        "status": "waiting"
-    }
-    orders.append(order)
-    return order
-
-@app.get("/orders")
-def get_orders():
-    return orders
-
-@app.get("/queue")
-def get_queue():
-    return {"queue_length": len(orders)}
+def root():
+    return {"message": "Canteen API is running 🍔"}
