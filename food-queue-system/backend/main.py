@@ -12,7 +12,7 @@ app = FastAPI(title="Canteen Queue API")
 # ⚠️ CORS — allows your React frontend to talk to this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://skipthelinefrontend.netlify.app/"],  # your Vite dev server
+    allow_origins=["http://localhost:5173", "https://skipthelinefrontend.netlify.app"],  # your Vite dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
