@@ -1,3 +1,4 @@
+customerhome.tsx
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Search, Filter, Clock, Package } from 'lucide-react';
@@ -11,7 +12,21 @@ export const CustomerHome: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const { orders } = useApp();
 
-  const categories = ['All', 'Burgers', 'Mexican', 'Pizza', 'Japanese'];
+  const categories = [
+    'All',
+    'Burgers',
+    'Mexican',
+    'Japanese',
+    'South Indian',
+    'Indian',
+    'Chinese',
+    'Italian',
+    'Street Food',
+    'Desserts',
+    'Sandwiches',
+    'Beverages',
+    'Fried Chicken'
+  ];
 
   // Get recent orders (last 3)
   const recentOrders = orders.slice(-3).reverse();
