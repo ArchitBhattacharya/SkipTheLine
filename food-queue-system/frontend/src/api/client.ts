@@ -1,10 +1,14 @@
 const BASE_URL = "http://localhost:8000";
 
-// Helper to get token from localStorage
 const getToken = () => localStorage.getItem("token");
 
+const authHeaders = () => ({
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${getToken()}`,
+});
+
 export const api = {
-  // Auth
+  // ── Auth ──────────────────────────────────────
   register: (data: object) =>
     fetch(`${BASE_URL}/auth/register`, {
       method: "POST",
@@ -19,25 +23,66 @@ export const api = {
       body: JSON.stringify(data),
     }).then(r => r.json()),
 
-  // Menu
+  // ── Menu ──────────────────────────────────────
   getMenu: (stallId: number) =>
     fetch(`${BASE_URL}/menu/${stallId}`).then(r => r.json()),
 
-  // Orders
+  addMenuItem: (data: object) =>
+    fetch(`${BASE_URL}/menu`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    }).then(r => r.json()),
+
+  updateMenuItem: (itemId: number, data: object) =>
+    fetch(`${BASE_URL}/menu/${itemId}`, {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    }).then(r => r.json()),
+
+  deleteMenuItem: (itemId: number) =>
+    fetch(`${BASE_URL}/menu/${itemId}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    }).then(r => r.json()),
+
+  // ── Orders ────────────────────────────────────
   placeOrder: (data: object) =>
     fetch(`${BASE_URL}/orders`, {
       method: "POST",
-      headers: { "Content-Type": "application/json",
-                 "Authorization": `Bearer ${getToken()}` },
+      headers: authHeaders(),
       body: JSON.stringify(data),
     }).then(r => r.json()),
 
   myOrders: () =>
     fetch(`${BASE_URL}/orders/my`, {
-      headers: { "Authorization": `Bearer ${getToken()}` }
+      headers: authHeaders(),
     }).then(r => r.json()),
 
-  // Queue
+  getOrder: (orderId: number) =>
+    fetch(`${BASE_URL}/orders/${orderId}`, {
+      headers: authHeaders(),
+    }).then(r => r.json()),
+
+  vendorOrders: () =>
+    fetch(`${BASE_URL}/orders`, {
+      headers: authHeaders(),
+    }).then(r => r.json()),
+
+  updateOrderStatus: (orderId: number, status: string) =>
+    fetch(`${BASE_URL}/orders/${orderId}/status`, {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify({ status }),
+    }).then(r => r.json()),
+
+  // ── Queue ─────────────────────────────────────
   getQueue: (stallId: number) =>
     fetch(`${BASE_URL}/queue/${stallId}`).then(r => r.json()),
+
+  getQueuePosition: (orderId: number) =>
+    fetch(`${BASE_URL}/queue/position/${orderId}`, {
+      headers: authHeaders(),
+    }).then(r => r.json()),
 };
