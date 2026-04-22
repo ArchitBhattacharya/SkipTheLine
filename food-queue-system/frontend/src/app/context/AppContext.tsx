@@ -26,6 +26,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
 }
+
 export interface StallItem {
   id: string;
   name: string;
@@ -54,7 +55,6 @@ export interface Order {
   timestamp: Date;
 }
 
-
 interface AppContextType {
   user: User | null;
   userMode: UserMode;
@@ -73,7 +73,14 @@ interface AppContextType {
   addOrder: (order: Order) => void;
   updateOrderStatus: (id: string, status: OrderStatus) => void;
   loginUser: (email: string, password: string) => Promise<void>;
-  registerUser: (name: string, email: string, password: string, role: UserMode, stallId?: number, phone?: string) => Promise<void>; // ✅ Fixed
+  registerUser: (
+    name: string, 
+    email: string, 
+    password: string, 
+    role: UserMode, 
+    stallId?: number, 
+    phone?: string
+  ) => Promise<void>; 
   logoutUser: () => void;
   fetchMyOrders: () => Promise<void>;
 }
@@ -92,9 +99,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const savedUser = localStorage.getItem('user');
     const savedToken = localStorage.getItem('token');
     if (savedUser && savedToken) {
-      const parsed = JSON.parse(savedUser);
-      setUserState(parsed);
-      setUserMode(parsed.mode);
+      try {
+        const parsed = JSON.parse(savedUser);
+        setUserState(parsed);
+        setUserMode(parsed.mode);
+        // Silently fetch orders for the returning user
+        api.myOrders().then(res => {
+          if (Array.isArray(res)) mapAndSetOrders(res);
+        }).catch(err => console.error("Auto-fetch orders failed:", err));
+      } catch (e) {
+        console.error("Failed to parse saved user", e);
+      }
     }
   }, []);
 
@@ -106,6 +121,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem('user');
       localStorage.removeItem('token');
     }
+  };
+
+  const mapAndSetOrders = (apiData: any[]) => {
+    const mapped: Order[] = apiData.map((o: any) => ({
+      id: String(o.id),
+      stallId: String(o.stall_id),
+      stallName: o.stall_name || 'Stall',
+      items: (o.items || []).map((i: any) => ({
+        id: String(i.id),
+        name: i.menu_item_name || 'Item',
+        price: i.price || 0,
+        quantity: i.quantity,
+      })),
+      total: o.total_price,
+      token: o.token,
+      status: o.status as OrderStatus,
+      estimatedTime: 15,
+      timestamp: new Date(o.created_at),
+    }));
+    setOrders(mapped);
   };
 
   const loginUser = async (email: string, password: string) => {
@@ -123,11 +158,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         mode: res.user.role as UserMode,
         stallId: res.user.stall_id ? String(res.user.stall_id) : undefined,
       };
+      
       setUser(u);
       setUserMode(u.mode);
       await fetchMyOrders();
-    } catch (error: any) {
-      throw error; // Let the Auth component catch this for toast
     } finally {
       setIsLoading(false);
     }
@@ -139,7 +173,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     password: string,
     role: UserMode, 
     stallId?: number,
-    phone?: string // ✅ Added
+    phone?: string 
   ) => {
     setIsLoading(true);
     try {
@@ -149,7 +183,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         password, 
         role, 
         stall_id: stallId,
-        phone // ✅ Passed to API
+        phone 
       });
       
       if (res.detail) throw new Error(res.detail);
@@ -163,10 +197,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         mode: res.user.role as UserMode,
         stallId: res.user.stall_id ? String(res.user.stall_id) : undefined,
       };
+      
       setUser(u);
       setUserMode(u.mode);
-    } catch (error: any) {
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -176,32 +209,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUser(null);
     setOrders([]);
     setCart([]);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
   };
 
   const fetchMyOrders = async () => {
     try {
       const res = await api.myOrders();
-      if (!Array.isArray(res)) return;
-      
-      const mapped: Order[] = res.map((o: any) => ({
-        id: String(o.id),
-        stallId: String(o.stall_id),
-        stallName: o.stall_name || 'Stall',
-        items: (o.items || []).map((i: any) => ({
-          id: String(i.id),
-          name: i.menu_item_name || 'Item',
-          price: i.price || 0,
-          quantity: i.quantity,
-        })),
-        total: o.total_price,
-        token: o.token,
-        status: o.status as OrderStatus,
-        estimatedTime: 15,
-        timestamp: new Date(o.created_at),
-      }));
-      setOrders(mapped);
+      if (Array.isArray(res)) {
+        mapAndSetOrders(res);
+      }
     } catch (e) {
       console.error('Failed to fetch orders', e);
     }

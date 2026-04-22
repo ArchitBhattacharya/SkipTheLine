@@ -25,13 +25,31 @@ export const Auth: React.FC = () => {
     setMounted(true);
   }, []);
 
+  // Email Validation Logic
+  const isValidEmail = (emailStr: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Email Validation Check - Trigger Alert
+    if (!isValidEmail(email)) {
+      toast.error("Invalid email address/password!! Please check and try again.");
+      return;
+    }
+
     try {
       if (isLogin) {
         await loginUser(email, password);
         toast.success('Welcome back!');
       } else {
+        // 2. Phone Number Validation Check (Must be exactly 10 digits)
+        if (phone.length !== 10) {
+          toast.error("Phone number must be exactly 10 digits.");
+          return;
+        }
+
         const fullPhone = `+91${phone}`;
         await registerUser(
           name, 
@@ -193,7 +211,7 @@ export const Auth: React.FC = () => {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <AnimatePresence mode="popLayout">
               {!isLogin && (
                 <motion.div
