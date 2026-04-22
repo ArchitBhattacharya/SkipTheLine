@@ -1,21 +1,54 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { User, Package, IndianRupee, LogOut, Trash2, Clock, ShoppingBag, TrendingUp, Mail, Phone, MapPin, Edit2 } from 'lucide-react';
+import { User, Package, IndianRupee, LogOut, Trash2, Clock, ShoppingBag, TrendingUp, Mail, Edit2, Phone, Store } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
+// Mock avatars representing restaurants/shops (for vendors)
+const SHOP_AVATARS = [
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=150&h=150&fit=crop", 
+  "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=150&h=150&fit=crop", 
+  "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=150&h=150&fit=crop", 
+  "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=150&h=150&fit=crop", 
+  "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=150&h=150&fit=crop", 
+  "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=150&h=150&fit=crop", 
+  "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop", 
+  "https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?w=150&h=150&fit=crop"  
+];
+
+// Mock 3D avatars representing users (3 Men: Boy, Young, Middle-aged | 3 Women: Girl, Young, Middle-aged)
+const CUSTOMER_AVATARS = [
+  // Men
+  "https://img.freepik.com/free-psd/3d-illustration-little-boy-with-glasses_23-2149436185.jpg?w=150&h=150&fit=crop", // Young Child (Boy)
+  "https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg?w=150&h=150&fit=crop", // Young Man
+  "https://img.freepik.com/free-psd/3d-illustration-business-man-with-glasses_23-2149436194.jpg?w=150&h=150&fit=crop", // Middle-Aged Man
+  // Women
+  "https://img.freepik.com/free-psd/3d-illustration-little-girl-with-glasses_23-2149436187.jpg?w=150&h=150&fit=crop", // Young Child (Girl)
+  "https://img.freepik.com/free-psd/3d-illustration-person-with-pink-hair_23-2149436186.jpg?w=150&h=150&fit=crop", // Young Woman
+  "https://img.freepik.com/free-psd/3d-illustration-business-woman-with-glasses_23-2149436193.jpg?w=150&h=150&fit=crop"  // Middle-Aged Woman
+];
+
 export const Profile: React.FC = () => {
   const { user, orders, setUser, userMode } = useApp();
   const navigate = useNavigate();
+  
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  
+  // Extract just the digits in case +91 was previously saved with it
+  const initialPhoneDigits = user?.phone?.replace(/\D/g, '').slice(-10) || '';
+  
+  const [editName, setEditName] = useState(user?.name || '');
+  const [editEmail, setEditEmail] = useState(user?.email || '');
+  const [editPhone, setEditPhone] = useState(initialPhoneDigits);
+  const [editAvatar, setEditAvatar] = useState(user?.avatar || '');
 
   if (!user) {
     navigate('/auth');
     return null;
   }
 
-  // Filter orders based on user mode
   const userOrders = userMode === 'customer'
     ? orders
     : orders.filter((o) => o.stallId === user.stallId);
@@ -34,6 +67,46 @@ export const Profile: React.FC = () => {
     setUser(null);
     toast.success('Account deleted successfully');
     navigate('/auth');
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Ensure only numbers
+    if (value.length <= 10) {
+      setEditPhone(value);
+    }
+  };
+
+  const handleUpdateProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate Phone Number Length
+    if (editPhone && editPhone.length !== 10) {
+      toast.error('Phone number must be exactly 10 digits');
+      return;
+    }
+
+    const hasChanges = 
+      editName !== user.name || 
+      editEmail !== user.email || 
+      editPhone !== (user.phone?.replace(/\D/g, '').slice(-10) || '') ||
+      editAvatar !== (user.avatar || '');
+
+    if (!hasChanges) {
+      toast.info('No changes detected');
+      setShowEditProfile(false);
+      return;
+    }
+
+    setUser({
+      ...user,
+      name: editName,
+      email: editEmail,
+      phone: editPhone, // Just storing the 10 digits
+      avatar: editAvatar,
+    });
+
+    toast.success('Profile updated successfully');
+    setShowEditProfile(false);
   };
 
   const stats = userMode === 'customer' ? [
@@ -76,6 +149,10 @@ export const Profile: React.FC = () => {
     },
   ];
 
+  const avatarsToDisplay = userMode === 'vendor' ? SHOP_AVATARS : CUSTOMER_AVATARS;
+  // Cleanly display phone with +91 format
+  const displayPhone = user.phone ? user.phone.replace(/\D/g, '').slice(-10) : '';
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 pt-20 pb-12 transition-colors duration-200">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -104,24 +181,30 @@ export const Profile: React.FC = () => {
             <div className="flex items-center gap-6">
               <motion.div
                 whileHover={{ scale: 1.05, rotate: 5 }}
-                className={`w-24 h-24 rounded-full bg-gradient-to-r ${
-                  userMode === 'customer' ? 'from-blue-500 to-cyan-500' : 'from-blue-500 to-cyan-500'
-                } flex items-center justify-center text-white text-4xl font-bold shadow-lg`}
+                className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center text-white text-4xl font-bold shadow-lg overflow-hidden shrink-0 border-4 border-white dark:border-gray-800"
               >
-                {user.name.charAt(0).toUpperCase()}
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.name} className="w-full h-full object-cover bg-white" />
+                ) : (
+                  user.name.charAt(0).toUpperCase()
+                )}
               </motion.div>
               <div>
                 <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{user.name}</h2>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-1">
-                  <Mail className="w-4 h-4" />
-                  <span>{user.email}</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <Mail className="w-4 h-4" />
+                    <span>{user.email}</span>
+                  </div>
+                  {displayPhone && (
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <Phone className="w-4 h-4" />
+                      <span>+91 {displayPhone}</span>
+                    </div>
+                  )}
                 </div>
-                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${
-                  userMode === 'customer'
-                    ? 'bg-green-500/20 text-green-600 dark:text-green-400'
-                    : 'bg-green-500/20 text-green-600 dark:text-green-400'
-                }`}>
-                  <User className="w-4 h-4" />
+                <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold bg-green-500/20 text-green-600 dark:text-green-400">
+                  {userMode === 'customer' ? <User className="w-4 h-4" /> : <Store className="w-4 h-4" />}
                   {userMode === 'customer' ? 'Customer' : 'Vendor'}
                 </div>
               </div>
@@ -129,6 +212,13 @@ export const Profile: React.FC = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setEditName(user.name);
+                setEditEmail(user.email);
+                setEditPhone(displayPhone);
+                setEditAvatar(user.avatar || '');
+                setShowEditProfile(true);
+              }}
               className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               <Edit2 className="w-5 h-5" />
@@ -161,7 +251,7 @@ export const Profile: React.FC = () => {
           })}
         </div>
 
-        {/* Last Order */}
+        {/* Last Order Section */}
         {lastOrder && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -274,6 +364,124 @@ export const Profile: React.FC = () => {
             Delete Account
           </motion.button>
         </motion.div>
+
+        {/* Edit Profile Modal */}
+        {showEditProfile && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowEditProfile(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-lg w-full border border-gray-200 dark:border-purple-500/20 overflow-y-auto max-h-[90vh]"
+            >
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Edit Profile</h3>
+              
+              <form onSubmit={handleUpdateProfile} className="space-y-4">
+                {/* Avatar Selection Based on Role */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {userMode === 'vendor' ? 'Shop Avatar' : 'Profile Avatar'}
+                  </label>
+                  <div className={`grid gap-3 mb-4 ${userMode === 'vendor' ? 'grid-cols-4 sm:grid-cols-4' : 'grid-cols-3 sm:grid-cols-3'}`}>
+                    {avatarsToDisplay.map((avatarUrl, index) => (
+                      <div 
+                        key={index}
+                        onClick={() => setEditAvatar(avatarUrl)}
+                        className={`relative aspect-square cursor-pointer rounded-xl overflow-hidden border-2 bg-gray-50 dark:bg-gray-700 transition-all duration-200 ${
+                          editAvatar === avatarUrl 
+                            ? 'border-green-500 scale-105 shadow-md shadow-green-500/20 z-10' 
+                            : 'border-transparent hover:scale-105 hover:opacity-90'
+                        }`}
+                      >
+                        <img 
+                          src={avatarUrl} 
+                          alt={`Avatar option ${index + 1}`} 
+                          className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {userMode === 'vendor' ? 'Shop Name' : 'Name'}
+                  </label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-gray-900 dark:text-white"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Phone Number
+                  </label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-600 border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-lg text-gray-700 dark:text-gray-300 font-semibold select-none">
+                      +91
+                    </span>
+                    <input
+                      type="tel"
+                      value={editPhone}
+                      onChange={handlePhoneChange}
+                      placeholder="10-digit number"
+                      maxLength={10}
+                      className="flex-1 w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-r-lg focus:ring-2 focus:ring-green-500 outline-none text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6 pt-4">
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      setShowEditProfile(false);
+                      setEditName(user.name);
+                      setEditEmail(user.email);
+                      setEditPhone(displayPhone);
+                      setEditAvatar(user.avatar || '');
+                    }}
+                    className="flex-1 py-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold rounded-lg"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    type="submit"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-lg shadow-lg"
+                  >
+                    Save Changes
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
 
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
