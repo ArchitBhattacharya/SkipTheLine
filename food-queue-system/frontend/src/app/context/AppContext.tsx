@@ -67,6 +67,7 @@ interface AppContextType {
   cart: CartItem[];
   orders: Order[];
   isLoading: boolean;
+  isInitializing: boolean;
   stalls: Stall[];
   createStall: (name: string, items: StallItem[], category?: string) => Promise<void>;
   updateStall: (id: string, name: string, items: StallItem[], category?: string) => Promise<void>;
@@ -119,13 +120,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [orders, setOrders] = useState<Order[]>([]);
   const [stalls, setStalls] = useState<Stall[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   const stallsRef = React.useRef<Stall[]>([]);
   useEffect(() => { stallsRef.current = stalls; }, [stalls]);
 
   useEffect(() => {
-    fetchStalls();
-    restoreSession();
+    const initApp = async () => {
+      try {
+        await Promise.all([fetchStalls(), restoreSession()]);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+    initApp();
   }, []);
 
   // ✅ UPDATED: restoreSession now calls GET /auth/me to verify the stored token
@@ -417,7 +425,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      user, userMode, cart, orders, isLoading, stalls,
+      user, userMode, cart, orders, isLoading, isInitializing, stalls,
       setUser, setUserMode, addToCart, removeFromCart, clearCart,
       addOrder, updateOrderStatus, loginUser, registerUser,
       logoutUser, deleteUser, updateProfile,

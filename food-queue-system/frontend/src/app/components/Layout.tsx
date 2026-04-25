@@ -6,16 +6,19 @@ import { Toaster } from 'sonner';
 import { useTheme } from 'next-themes';
 
 export const Layout: React.FC = () => {
-  const { user, userMode } = useApp();
+  const { user, userMode, isInitializing } = useApp();
   const { theme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Wait for session restoration to complete before redirecting
+  // If isInitializing is true, don't redirect to auth yet — the user might
+  // have a valid token being verified by restoreSession() right now.
   useEffect(() => {
-    if (!user) {
+    if (!isInitializing && !user) {
       navigate('/auth');
     }
-  }, [user, navigate]);
+  }, [user, isInitializing, navigate]);
 
   useEffect(() => {
     // Redirect based on user mode
@@ -25,6 +28,11 @@ export const Layout: React.FC = () => {
       }
     }
   }, [userMode, user, navigate, location.pathname]);
+
+  // Show nothing while initializing to avoid flashing the login page
+  if (isInitializing) {
+    return null;
+  }
 
   if (!user) {
     return null;
