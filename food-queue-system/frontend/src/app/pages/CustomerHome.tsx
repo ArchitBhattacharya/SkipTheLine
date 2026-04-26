@@ -230,7 +230,7 @@ export const StallDetail: React.FC = () => {
   );
 };
 
-// ─── Customer Home  (route: "/") ──────────────────────────────────────────────
+// ─── Customer Home  (route: "/") ─────────────────────────────────────────────
 export const CustomerHome: React.FC = () => {
   const { stalls, orders } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
